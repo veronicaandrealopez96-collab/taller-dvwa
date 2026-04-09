@@ -1,56 +1,57 @@
 <?php
 
 if( isset( $_REQUEST[ 'Submit' ] ) ) {
-	// Get input
-	$id = $_REQUEST[ 'id' ];
+    // Get input
+    $id = $_REQUEST[ 'id' ];
 
-	switch ($_DVWA['SQLI_DB']) {
-		case MYSQL:
-			// Check database
-			$query  = "SELECT first_name, last_name FROM users WHERE user_id = '$id';";
-			$result = mysqli_query($GLOBALS["___mysqli_ston"],  $query ) or die( '<pre>' . ((is_object($GLOBALS["___mysqli_ston"])) ? mysqli_error($GLOBALS["___mysqli_ston"]) : (($___mysqli_res = mysqli_connect_error()) ? $___mysqli_res : false)) . '</pre>' );
+    switch ($_DVWA['SQLI_DB']) {
+        case MYSQL:
+            // --- INICIO DE CÓDIGO SEGURO ---
+            // 1. Usamos un marcador de posición (?) en lugar de la variable directa
+            $query  = "SELECT first_name, last_name FROM users WHERE user_id = ?;";
+            
+            // 2. Preparamos la sentencia
+            $stmt = mysqli_prepare($GLOBALS["___mysqli_ston"], $query);
+            
+            // 3. Vinculamos el parámetro (la "s" indica que el ID se trata como string)
+            mysqli_stmt_bind_param($stmt, "s", $id);
+            
+            // 4. Ejecutamos la consulta de forma segura
+            mysqli_stmt_execute($stmt);
+            
+            // 5. Obtenemos el resultado
+            $result = mysqli_stmt_get_result($stmt);
 
-			// Get results
-			while( $row = mysqli_fetch_assoc( $result ) ) {
-				// Get values
-				$first = $row["first_name"];
-				$last  = $row["last_name"];
+            // Get results
+            while( $row = mysqli_fetch_assoc( $result ) ) {
+                $first = $row["first_name"];
+                $last  = $row["last_name"];
+                $html .= "<pre>ID: {$id}<br />First name: {$first}<br />Surname: {$last}</pre>";
+            }
 
-				// Feedback for end user
-				$html .= "<pre>ID: {$id}<br />First name: {$first}<br />Surname: {$last}</pre>";
-			}
-
-			mysqli_close($GLOBALS["___mysqli_ston"]);
-			break;
-		case SQLITE:
-			global $sqlite_db_connection;
-
-			#$sqlite_db_connection = new SQLite3($_DVWA['SQLITE_DB']);
-			#$sqlite_db_connection->enableExceptions(true);
-
-			$query  = "SELECT first_name, last_name FROM users WHERE user_id = '$id';";
-			#print $query;
-			try {
-				$results = $sqlite_db_connection->query($query);
-			} catch (Exception $e) {
-				echo 'Caught exception: ' . $e->getMessage();
-				exit();
-			}
-
-			if ($results) {
-				while ($row = $results->fetchArray()) {
-					// Get values
-					$first = $row["first_name"];
-					$last  = $row["last_name"];
-
-					// Feedback for end user
-					$html .= "<pre>ID: {$id}<br />First name: {$first}<br />Surname: {$last}</pre>";
-				}
-			} else {
-				echo "Error in fetch ".$sqlite_db->lastErrorMsg();
-			}
-			break;
-	} 
+            mysqli_stmt_close($stmt);
+            // --- FIN DE CÓDIGO SEGURO ---
+            break;
+            
+        case SQLITE:
+            // (Puedes dejar el código de SQLite como está o aplicar una lógica similar)
+            global $sqlite_db_connection;
+            $query  = "SELECT first_name, last_name FROM users WHERE user_id = '$id';";
+            try {
+                $results = $sqlite_db_connection->query($query);
+            } catch (Exception $e) {
+                echo 'Caught exception: ' . $e->getMessage();
+                exit();
+            }
+            if ($results) {
+                while ($row = $results->fetchArray()) {
+                    $first = $row["first_name"];
+                    $last  = $row["last_name"];
+                    $html .= "<pre>ID: {$id}<br />First name: {$first}<br />Surname: {$last}</pre>";
+                }
+            }
+            break;
+    } 
 }
 
 ?>

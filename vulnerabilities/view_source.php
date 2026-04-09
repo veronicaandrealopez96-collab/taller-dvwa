@@ -12,7 +12,6 @@ if (array_key_exists ("id", $_GET) && array_key_exists ("security", $_GET)) {
 	$id       = $_GET[ 'id' ];
 	$security = $_GET[ 'security' ];
 
-
 	switch ($id) {
 		case "fi" :
 			$vuln = 'File Inclusion';
@@ -60,7 +59,17 @@ if (array_key_exists ("id", $_GET) && array_key_exists ("security", $_GET)) {
 			$vuln = "Unknown Vulnerability";
 	}
 
-	$source = @file_get_contents( DVWA_WEB_PAGE_TO_ROOT . "vulnerabilities/{$id}/source/{$security}.php" );
+	// --- CORRECCIÓN 1: MITIGACIÓN PATH TRAVERSAL (ALLOWLIST) ---
+	$allowed_ids = array("fi", "brute", "csrf", "exec", "sqli", "sqli_blind", "upload", "xss_r", "xss_s", "weak_id", "javascript", "authbypass", "open_redirect", "bac");
+	$allowed_security = array("low", "medium", "high", "impossible");
+
+	if (in_array($id, $allowed_ids) && in_array($security, $allowed_security)) {
+		$source = @file_get_contents( DVWA_WEB_PAGE_TO_ROOT . "vulnerabilities/{$id}/source/{$security}.php" );
+	} else {
+		$source = "<?php echo 'Acceso denegado: Intento de Path Traversal detectado.'; ?>";
+	}
+	// --- FIN CORRECCIÓN 1 ---
+
 	$source = str_replace( array( '$html .=' ), array( 'echo' ), $source );
 
 	$js_html = "";
@@ -78,6 +87,10 @@ if (array_key_exists ("id", $_GET) && array_key_exists ("security", $_GET)) {
 		";
 	}
 
+	// --- CORRECCIÓN 2: MITIGACIÓN XSS (HTMLSPECIALCHARS) ---
+	// Sanitizamos $id antes de imprimirla en el botón de abajo
+	$safe_id = htmlspecialchars($id, ENT_QUOTES, 'UTF-8');
+
 	$page[ 'body' ] .= "
 	<div class=\"body_padded\">
 		<h1>{$vuln} Source</h1>
@@ -94,9 +107,11 @@ if (array_key_exists ("id", $_GET) && array_key_exists ("security", $_GET)) {
 		<br /> <br />
 
 		<form>
-			<input type=\"button\" value=\"Compare All Levels\" onclick=\"window.location.href='view_source_all.php?id=$id'\">
+			<input type=\"button\" value=\"Compare All Levels\" onclick=\"window.location.href='view_source_all.php?id={$safe_id}'\">
 		</form>
 	</div>\n";
+	// --- FIN CORRECCIÓN 2 ---
+
 } else {
 	$page['body'] = "<p>Not found</p>";
 }
