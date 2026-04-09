@@ -1,0 +1,7 @@
+{
+    "name": "veronica/taller-dvwa",
+    "description": "Laboratorio de vulnerabilidades",
+    "require": {
+        "php": ">=7.0"
+    }
+}
